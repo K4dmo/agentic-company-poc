@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Run {{ thread_id[:8] }}…</h1>
+<p class="muted"><code>{{ thread_id }}</code></p>
+<div id="run-panel"
+  {% if poll %}
+  hx-get="/runs/{{ thread_id }}/fragment"
+  hx-trigger="every 2s"
+  hx-swap="innerHTML"
+  {% endif %}
+>
+  {% include "run_fragment.html" %}
+</div>
+{% endblock %}

@@ -1,0 +1,65 @@
+<div class="card">
+  <div class="row" style="justify-content: space-between;">
+    <div>
+      <strong>Status:</strong> {{ live.get('status') or (summary.get('summary') or {}).get('status') or '—' }}
+      &nbsp;|&nbsp;
+      <strong>Verdict:</strong> {{ live.get('verdict') or (summary.get('summary') or {}).get('verdict') or '—' }}
+    </div>
+    <a class="btn" href="/">All runs</a>
+  </div>
+</div>
+
+{% if interrupt %}
+<div class="card">
+  <h2>Human gate: {{ interrupt.type }}</h2>
+  <pre>{{ interrupt | tojson(indent=2) }}</pre>
+  <form method="post" action="/runs/{{ thread_id }}/decide" class="row">
+    <input type="hidden" name="action" value="approve" />
+    <button type="submit">Approve</button>
+  </form>
+  <form method="post" action="/runs/{{ thread_id }}/decide" style="margin-top: 0.75rem;">
+    <input type="hidden" name="action" value="revise" />
+    <label>Revise note / brief</label>
+    <textarea name="note" rows="3" placeholder="Changes required…"></textarea>
+    <div class="row" style="margin-top: 0.5rem;">
+      <button type="submit">Request changes</button>
+    </div>
+  </form>
+  <form method="post" action="/runs/{{ thread_id }}/decide" style="margin-top: 0.75rem;">
+    <input type="hidden" name="action" value="abort" />
+    <button type="submit">Abort</button>
+  </form>
+</div>
+{% endif %}
+
+{% set plan_obj = summary.get('plan') if summary.get('plan') is mapping else {} %}
+{% set sum_obj = summary.get('summary') if summary.get('summary') is mapping else {} %}
+
+<div class="card">
+  <h2>Brief</h2>
+  <pre>{{ live.get('brief') or sum_obj.get('brief') or '—' }}</pre>
+</div>
+
+<div class="card">
+  <h2>Plan</h2>
+  <pre>{{ live.get('plan') or plan_obj.get('plan') or '—' }}</pre>
+  <h3>Acceptance criteria</h3>
+  <pre>{{ (live.get('acceptance_criteria') or plan_obj.get('acceptance_criteria') or []) | tojson(indent=2) }}</pre>
+</div>
+
+<div class="card">
+  <h2>Builder</h2>
+  <pre>{{ live.get('builder_summary') or sum_obj.get('builder_summary') or '—' }}</pre>
+  <h3>Files</h3>
+  <pre>{{ (live.get('files_touched') or summary.get('files') or []) | tojson(indent=2) }}</pre>
+</div>
+
+<div class="card">
+  <h2>Critique</h2>
+  <pre>{{ (live.get('critique') or summary.get('critique') or {}) | tojson(indent=2) }}</pre>
+</div>
+
+<div class="card">
+  <h2>Memory hits</h2>
+  <pre>{{ (live.get('memory_hits') or []) | tojson(indent=2) }}</pre>
+</div>

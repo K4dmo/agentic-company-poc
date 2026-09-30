@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Runs</h1>
+{% if not runs %}
+<p class="muted">No runs yet. Start one from New run.</p>
+{% else %}
+<table>
+  <thead>
+    <tr><th>Thread</th><th>Status</th><th>Verdict</th><th>Brief</th></tr>
+  </thead>
+  <tbody>
+  {% for run in runs %}
+    <tr>
+      <td><a href="/runs/{{ run.thread_id }}">{{ run.thread_id[:8] }}…</a></td>
+      <td>{{ run.status or "—" }}</td>
+      <td>{{ run.verdict or "—" }}</td>
+      <td>{{ (run.brief or "")[:80] }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endblock %}

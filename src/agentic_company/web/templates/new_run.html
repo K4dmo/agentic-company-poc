@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>New run</h1>
+<form method="post" action="/runs/new" class="card">
+  <label>Brief</label>
+  <textarea name="brief" rows="6" required placeholder="Build a CPF validator module with tests"></textarea>
+  <div style="margin-top: 1rem;">
+    <label>Builder backend</label>
+    <select name="builder">
+      <option value="native" {% if default_builder == "native" %}selected{% endif %}>native</option>
+      <option value="deepagents" {% if default_builder == "deepagents" %}selected{% endif %}>deepagents</option>
+    </select>
+  </div>
+  <div class="row" style="margin-top: 1rem;">
+    <button type="submit">Start company</button>
+    <a class="btn" href="/">Cancel</a>
+  </div>
+</form>
+{% endblock %}

@@ -1,0 +1,17 @@
+[
+  {
+    "id": "cpf_validator",
+    "brief": "Build a small Python module that validates Brazilian CPF numbers, with pytest tests covering valid and invalid cases.",
+    "builders": ["native", "deepagents"]
+  },
+  {
+    "id": "slugify",
+    "brief": "Create a Python utility slugify(text) that lowercases, strips punctuation, and joins words with hyphens. Include a short README and tests.",
+    "builders": ["native"]
+  },
+  {
+    "id": "todo_cli",
+    "brief": "Implement a minimal todo list stored in a local JSON file with add/list/done commands and basic tests.",
+    "builders": ["native"]
+  }
+]
