@@ -20,12 +20,12 @@ from agentic_company.config import get_settings  # noqa: E402
 get_settings.cache_clear()
 
 from agentic_company.graph import get_graph, initial_state  # noqa: E402
+from agentic_company.llm import credentials_help, has_llm_credentials  # noqa: E402
 
 
 def main() -> int:
-    settings = get_settings()
-    if not settings.openai_api_key:
-        print("SKIP: OPENAI_API_KEY not set")
+    if not has_llm_credentials():
+        print(f"SKIP: no LLM credentials ({credentials_help()})")
         return 0
 
     briefs_path = Path(__file__).parent / "golden_briefs.json"

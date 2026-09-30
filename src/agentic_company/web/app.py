@@ -11,9 +11,15 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from langgraph.types import Command
 
-from agentic_company.config import get_settings
+from agentic_company.config import ensure_run_dirs, get_settings
+from agentic_company.github_issues import (
+    clone_repo_into_workspace,
+    fetch_issue,
+    issue_artifact_payload,
+    parse_issue_ref,
+)
 from agentic_company.graph import get_graph, initial_state
-from agentic_company.persistence import list_runs, load_run_summary
+from agentic_company.persistence import list_runs, load_run_summary, write_artifact
 
 TEMPLATES_DIR = Path(__file__).parent / "templates"
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
@@ -65,12 +71,36 @@ def new_run_form(request: Request) -> HTMLResponse:
 
 @app.post("/runs/new")
 def create_run(
-    brief: str = Form(...),
+    brief: str = Form(""),
+    issue_url: str = Form(""),
     builder: str = Form("native"),
+    clone_repo: str = Form(""),
 ) -> RedirectResponse:
     thread_id = str(uuid.uuid4())
     graph = get_graph()
-    state = initial_state(brief, thread_id, builder_backend=builder)
+    issue_url = (issue_url or "").strip()
+    brief = (brief or "").strip()
+
+    if issue_url:
+        ref = parse_issue_ref(issue_url)
+        issue = fetch_issue(ref)
+        workspace, _ = ensure_run_dirs(thread_id)
+        write_artifact(
+            thread_id,
+            "github_issue.json",
+            issue_artifact_payload(issue),
+        )
+        write_artifact(thread_id, "github_issue.md", issue.to_brief())
+        (workspace / "ISSUE.md").write_text(issue.to_brief(), encoding="utf-8")
+        if clone_repo:
+            clone_repo_into_workspace(ref, workspace)
+        state = initial_state(issue.to_brief(), thread_id, builder_backend=builder)
+        state["deliverable_kind"] = "github_issue"
+    elif brief:
+        state = initial_state(brief, thread_id, builder_backend=builder)
+    else:
+        return RedirectResponse(url="/runs/new?error=missing_input", status_code=303)
+
     graph.invoke(state, config=_config(thread_id))
     return RedirectResponse(url=f"/runs/{thread_id}", status_code=303)
 
@@ -116,13 +146,33 @@ def decide(
     thread_id: str,
     action: str = Form(...),
     note: str = Form(""),
+    text: str = Form(""),
+    image_path: str = Form(""),
+    article_url: str = Form(""),
+    visibility: str = Form(""),
 ) -> RedirectResponse:
     if action == "approve":
-        decision = {"action": "approve"}
+        decision: dict[str, Any] = {"action": "approve"}
+        if text.strip():
+            decision["text"] = text.strip()
+        if image_path.strip():
+            decision["image_path"] = image_path.strip()
+        if article_url.strip():
+            decision["article_url"] = article_url.strip()
+        if visibility.strip():
+            decision["visibility"] = visibility.strip()
+    elif action == "skip":
+        decision = {"action": "skip"}
     elif action == "abort":
         decision = {"action": "abort"}
     else:
-        decision = {"action": "revise", "brief": note, "revision_notes": note}
+        revised = (text or note or "").strip()
+        decision = {
+            "action": "revise",
+            "brief": revised,
+            "revision_notes": revised,
+            "text": revised,
+        }
     get_graph().invoke(Command(resume=decision), config=_config(thread_id))
     return RedirectResponse(url=f"/runs/{thread_id}", status_code=303)
 

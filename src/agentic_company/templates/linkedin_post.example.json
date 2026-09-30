@@ -1,0 +1,17 @@
+{
+  "id": "post-01-example",
+  "platform": "linkedin",
+  "format": "text",
+  "hook": "Most teams ship features. Few ship outcomes.",
+  "body": "Most teams ship features. Few ship outcomes.\n\nHere is what changed for us...\n\nWhat is one process you would delete this quarter?",
+  "cta": "Comment with your answer",
+  "hashtags": ["#leadership", "#product"],
+  "mention_targets": [],
+  "image_prompts": [],
+  "carousel_slides": [],
+  "poll_options": [],
+  "tone": "direct, professional",
+  "audience": "engineering managers",
+  "goal": "engagement",
+  "notes": "optional production notes"
+}

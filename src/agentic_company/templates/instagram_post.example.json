@@ -1,0 +1,17 @@
+{
+  "id": "post-01-example",
+  "platform": "instagram",
+  "format": "single",
+  "hook": "Your scroll-stopping first line.",
+  "caption": "Full caption with line breaks.\n\nCTA goes here.",
+  "cta": "Save this for later",
+  "hashtags": ["#example", "#brand"],
+  "alt_text": "Describe the image for accessibility",
+  "image_prompts": [
+    "Detailed visual prompt: subject, setting, lighting, style, aspect ratio 4:5"
+  ],
+  "carousel_slides": [],
+  "tone": "warm, confident",
+  "audience": "who this is for",
+  "notes": "optional production notes"
+}

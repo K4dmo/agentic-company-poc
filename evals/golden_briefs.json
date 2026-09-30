@@ -13,5 +13,15 @@
     "id": "todo_cli",
     "brief": "Implement a minimal todo list stored in a local JSON file with add/list/done commands and basic tests.",
     "builders": ["native"]
+  },
+  {
+    "id": "instagram_launch",
+    "brief": "Create an Instagram campaign for a new cold-brew coffee brand aimed at remote workers. Produce 3 posts: (1) single image hook about afternoon energy crash, (2) carousel explaining 3 brew tips, (3) Reel script teaser for a 15s behind-the-scenes. Include captions, CTAs, hashtags, alt text, and detailed image/video prompts. Write packages under posts/.",
+    "builders": ["native"]
+  },
+  {
+    "id": "linkedin_saas",
+    "brief": "Create a LinkedIn campaign for a B2B SaaS analytics product aimed at engineering managers. Produce 3 posts: (1) text thought-leadership hook about vanity metrics, (2) single_image post with a visual prompt for a dashboard screenshot style graphic, (3) carousel_document with 4 slides teaching a simple KPI framework. Include hooks, body copy, CTAs, restrained hashtags, and write packages under linkedin_posts/.",
+    "builders": ["native"]
   }
 ]

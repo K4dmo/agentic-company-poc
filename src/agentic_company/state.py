@@ -25,6 +25,7 @@ class CompanyState(TypedDict, total=False):
     acceptance_criteria: list[str]
     file_outline: list[str]
     hired_specialists: list[str]
+    deliverable_kind: str
     specialist_notes: list[dict[str, Any]]
     workspace_root: str
     builder_backend: str
@@ -39,3 +40,13 @@ class CompanyState(TypedDict, total=False):
     abort: bool
     builder_summary: str
     critique_history: Annotated[list[dict[str, Any]], operator.add]
+    pipeline_phase: str
+    tests_passed: bool
+    test_output: str
+    test_retries: int
+    pr_url: str
+    pr_number: int
+    pr_result: dict[str, Any]
+    linkedin_announce: dict[str, Any]
+    linkedin_publish_decision: dict[str, Any]
+    linkedin_publish_result: dict[str, Any]

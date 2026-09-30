@@ -13,6 +13,39 @@
 <div class="card">
   <h2>Human gate: {{ interrupt.type }}</h2>
   <pre>{{ interrupt | tojson(indent=2) }}</pre>
+
+  {% if interrupt.type == 'linkedin_publish_approval' %}
+  <p>Review the drafted LinkedIn post. Approve to publish via the Share on LinkedIn API, optionally attach a local image or article URL, revise the copy, or skip.</p>
+  <form method="post" action="/runs/{{ thread_id }}/decide" style="margin-top: 0.75rem;">
+    <input type="hidden" name="action" value="approve" />
+    <label>Post text (optional override)</label>
+    <textarea name="text" rows="8" placeholder="Leave blank to publish the draft above">{{ interrupt.text or '' }}</textarea>
+    <label style="display:block;margin-top:0.5rem;">Image path (optional)</label>
+    <input type="text" name="image_path" placeholder="/absolute/path/to/image.png" style="width:100%;" />
+    <label style="display:block;margin-top:0.5rem;">Article / PR URL (optional; ignored if image is set)</label>
+    <input type="text" name="article_url" value="{{ interrupt.suggested_article_url or '' }}" placeholder="https://..." style="width:100%;" />
+    <label style="display:block;margin-top:0.5rem;">Visibility</label>
+    <select name="visibility">
+      <option value="PUBLIC" selected>PUBLIC</option>
+      <option value="CONNECTIONS">CONNECTIONS</option>
+    </select>
+    <div class="row" style="margin-top: 0.75rem;">
+      <button type="submit">Approve &amp; publish</button>
+    </div>
+  </form>
+  <form method="post" action="/runs/{{ thread_id }}/decide" style="margin-top: 0.75rem;">
+    <input type="hidden" name="action" value="revise" />
+    <label>Revise post text (re-show for approval; does not publish)</label>
+    <textarea name="text" rows="6" placeholder="Edited LinkedIn copy…">{{ interrupt.text or '' }}</textarea>
+    <div class="row" style="margin-top: 0.5rem;">
+      <button type="submit">Save revision</button>
+    </div>
+  </form>
+  <form method="post" action="/runs/{{ thread_id }}/decide" class="row" style="margin-top: 0.75rem;">
+    <input type="hidden" name="action" value="skip" />
+    <button type="submit">Skip publish</button>
+  </form>
+  {% else %}
   <form method="post" action="/runs/{{ thread_id }}/decide" class="row">
     <input type="hidden" name="action" value="approve" />
     <button type="submit">Approve</button>
@@ -29,6 +62,7 @@
     <input type="hidden" name="action" value="abort" />
     <button type="submit">Abort</button>
   </form>
+  {% endif %}
 </div>
 {% endif %}
 
@@ -58,6 +92,13 @@
   <h2>Critique</h2>
   <pre>{{ (live.get('critique') or summary.get('critique') or {}) | tojson(indent=2) }}</pre>
 </div>
+
+{% if live.get('linkedin_publish_result') %}
+<div class="card">
+  <h2>LinkedIn publish</h2>
+  <pre>{{ live.get('linkedin_publish_result') | tojson(indent=2) }}</pre>
+</div>
+{% endif %}
 
 <div class="card">
   <h2>Memory hits</h2>

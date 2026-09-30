@@ -5,9 +5,21 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
-RoleId = Literal["tester", "docs_writer", "security_reviewer"]
+RoleId = Literal[
+    "tester",
+    "docs_writer",
+    "security_reviewer",
+    "social_copywriter",
+    "visual_designer",
+]
 
-ALLOWED_ROLES: tuple[RoleId, ...] = ("tester", "docs_writer", "security_reviewer")
+ALLOWED_ROLES: tuple[RoleId, ...] = (
+    "tester",
+    "docs_writer",
+    "security_reviewer",
+    "social_copywriter",
+    "visual_designer",
+)
 
 
 @dataclass(frozen=True)
@@ -32,6 +44,22 @@ REGISTRY: dict[RoleId, RoleSpec] = {
         id="security_reviewer",
         title="Security Reviewer",
         focus="Input validation, injection, secrets, unsafe subprocess/path usage",
+    ),
+    "social_copywriter": RoleSpec(
+        id="social_copywriter",
+        title="Social Copywriter",
+        focus=(
+            "Instagram and LinkedIn hooks, captions/body copy, CTAs, hashtags, "
+            "carousel/document slide copy, polls, tone, and platform-appropriate length"
+        ),
+    ),
+    "visual_designer": RoleSpec(
+        id="visual_designer",
+        title="Visual Designer",
+        focus=(
+            "Image/Reel visual direction, slide layouts, color/mood, composition notes, "
+            "and detailed image-generation prompts (no binary images)"
+        ),
     ),
 }
 

@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from langchain.chat_models import init_chat_model
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from agentic_company.config import get_settings
+from agentic_company.llm import get_chat_model
 from agentic_company.persistence import write_artifact
 from agentic_company.prompts import CRITIC_SYSTEM
 from agentic_company.schemas import CritiqueOutput
@@ -16,7 +16,7 @@ from agentic_company.tools.filesystem import read_workspace_bundle, snapshot_wor
 
 def critic_node(state: dict[str, Any]) -> dict[str, Any]:
     settings = get_settings()
-    llm = init_chat_model(settings.critic_model).with_structured_output(CritiqueOutput)
+    llm = get_chat_model("critic").with_structured_output(CritiqueOutput)
     workspace = state.get("workspace_root") or ""
     listing = snapshot_workspace(workspace)
     bundle = read_workspace_bundle(workspace)
@@ -24,6 +24,8 @@ def critic_node(state: dict[str, Any]) -> dict[str, Any]:
     criteria = state.get("acceptance_criteria") or []
     human = f"""Brief:
 {state.get('brief', '')}
+
+Deliverable kind: {state.get('deliverable_kind', 'software')}
 
 Plan:
 {state.get('plan', '')}

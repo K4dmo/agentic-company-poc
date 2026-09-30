@@ -4,15 +4,14 @@ from __future__ import annotations
 
 from typing import Any
 
-from langchain.chat_models import init_chat_model
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, Field
 
 from agentic_company.config import get_settings
+from agentic_company.llm import get_chat_model
 from agentic_company.prompts import BUILDER_SYSTEM
-from agentic_company.tools.filesystem import make_filesystem_tools
-from agentic_company.tools.testing import make_testing_tools
+from agentic_company.tools.builder_toolkit import detect_deliverable_kind, make_builder_tools
 
 
 class SignalDoneArgs(BaseModel):
@@ -32,7 +31,7 @@ def _signal_done_tool() -> StructuredTool:
     )
 
 
-def _build_user_prompt(state: dict[str, Any]) -> str:
+def _build_user_prompt(state: dict[str, Any], kind: str) -> str:
     notes = state.get("specialist_notes") or []
     note_text = "\n".join(
         f"- [{n.get('role')}]: {n.get('notes')}" for n in notes
@@ -43,9 +42,46 @@ def _build_user_prompt(state: dict[str, Any]) -> str:
     crit_text = "\n".join(f"- {c}" for c in criteria)
     outline = state.get("file_outline") or []
     outline_text = "\n".join(f"- {p}" for p in outline)
+
+    domain_hint = ""
+    if kind == "github_issue":
+        domain_hint = """
+GitHub issue mode:
+1) Call load_issue_context
+2) Explore with repo_tree / read_file (prefer paths under repo/)
+3) Implement the fix with write_file/edit_file
+4) Add/update tests, then run_tests (pytest must pass)
+5) Use git_status/git_diff
+6) Call write_issue_notes then signal_done
+(After human ship approval: automated verify_tests → create_pr → linkedin_announce → linkedin_gate → linkedin_publish)
+"""
+    elif kind == "instagram_posts":
+        domain_hint = """
+Instagram mode:
+1) Prefer write_instagram_post for each post (creates validated package files)
+2) Call write_campaign_readme for posts/README.md
+3) Use list_instagram_posts to verify
+4) Call signal_done
+"""
+    elif kind == "linkedin_posts":
+        domain_hint = """
+LinkedIn mode:
+1) Prefer write_linkedin_post for each post (creates validated package files)
+2) Call write_linkedin_campaign_readme for linkedin_posts/README.md
+3) Use list_linkedin_posts to verify
+4) Call signal_done
+"""
+    elif kind == "mixed":
+        domain_hint = (
+            "Mixed mode: use GitHub tools and/or write_instagram_post / "
+            "write_linkedin_post as the plan requires.\n"
+        )
+
     return f"""Brief:
 {state.get('brief', '')}
 
+Deliverable kind: {kind}
+{domain_hint}
 Plan:
 {state.get('plan', '')}
 
@@ -69,13 +105,19 @@ Implement now. Use tools. Call signal_done when finished.
 def run_native_builder(state: dict[str, Any]) -> dict[str, Any]:
     settings = get_settings()
     workspace = state["workspace_root"]
-    tools = make_filesystem_tools(workspace) + make_testing_tools(workspace) + [_signal_done_tool()]
+    kind = detect_deliverable_kind(state)
+    tools = make_builder_tools(
+        workspace,
+        kind,
+        thread_id=state.get("thread_id"),
+        signal_done_tool=_signal_done_tool(),
+    )
     tool_map = {t.name: t for t in tools}
 
-    llm = init_chat_model(settings.builder_model).bind_tools(tools)
+    llm = get_chat_model("builder").bind_tools(tools)
     messages: list[Any] = [
         SystemMessage(content=BUILDER_SYSTEM),
-        HumanMessage(content=_build_user_prompt(state)),
+        HumanMessage(content=_build_user_prompt(state, kind)),
     ]
 
     files_touched: list[str] = []
@@ -89,7 +131,6 @@ def run_native_builder(state: dict[str, Any]) -> dict[str, Any]:
         transcript.append({"role": "assistant", "content": str(response.content)})
 
         if not response.tool_calls:
-            # Model stopped without tools — treat content as summary if any files exist
             summary = summary or str(response.content)[:2000]
             break
 
@@ -109,6 +150,23 @@ def run_native_builder(state: dict[str, Any]) -> dict[str, Any]:
                 path = args["path"]
                 if path not in files_touched:
                     files_touched.append(path)
+            if name == "write_instagram_post" and args.get("id"):
+                path = f"posts/{args['id']}/post.json"
+                if path not in files_touched:
+                    files_touched.append(path)
+            if name == "write_campaign_readme":
+                if "posts/README.md" not in files_touched:
+                    files_touched.append("posts/README.md")
+            if name == "write_linkedin_post" and args.get("id"):
+                path = f"linkedin_posts/{args['id']}/post.json"
+                if path not in files_touched:
+                    files_touched.append(path)
+            if name == "write_linkedin_campaign_readme":
+                if "linkedin_posts/README.md" not in files_touched:
+                    files_touched.append("linkedin_posts/README.md")
+            if name == "write_issue_notes":
+                if "ISSUE_NOTES.md" not in files_touched:
+                    files_touched.append("ISSUE_NOTES.md")
             if name == "signal_done":
                 summary = args.get("summary") or summary
                 for path in args.get("files_touched") or []:
@@ -129,5 +187,6 @@ def run_native_builder(state: dict[str, Any]) -> dict[str, Any]:
         "builder_messages": transcript[-30:],
         "files_touched": files_touched,
         "builder_summary": summary or "Builder finished without explicit summary",
+        "deliverable_kind": kind,
         "status": "review",
     }

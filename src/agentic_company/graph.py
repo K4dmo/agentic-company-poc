@@ -10,11 +10,18 @@ from agentic_company.config import ensure_run_dirs, get_settings
 from agentic_company.nodes.builder import builder_node
 from agentic_company.nodes.critic import critic_node
 from agentic_company.nodes.gates import plan_gate_node, ship_gate_node
+from agentic_company.nodes.linkedin_publish import linkedin_gate_node, linkedin_publish_node
 from agentic_company.nodes.memory_nodes import memory_recall_node, memory_write_node
 from agentic_company.nodes.planner import planner_node
+from agentic_company.nodes.ship_pipeline import (
+    create_pr_node,
+    linkedin_announce_node,
+    verify_tests_node,
+)
 from agentic_company.nodes.specialists import specialists_node
 from agentic_company.persistence import get_checkpointer
 from agentic_company.state import CompanyState
+from agentic_company.tools.builder_toolkit import detect_deliverable_kind
 
 _compiled = None
 
@@ -26,7 +33,6 @@ def route_after_plan_gate(
         return "memory_write"
     feedback = state.get("human_feedback") or {}
     if feedback.get("action") == "revise":
-        # Replan until human approves
         return "planner"
     hired = state.get("hired_specialists") or []
     if hired:
@@ -46,15 +52,51 @@ def route_after_critic(
     return "memory_write"
 
 
+def route_after_builder(
+    state: CompanyState,
+) -> Literal["critic", "verify_tests"]:
+    if state.get("pipeline_phase") == "fix_loop":
+        return "verify_tests"
+    return "critic"
+
+
 def route_after_ship_gate(
     state: CompanyState,
-) -> Literal["builder", "memory_write"]:
+) -> Literal["builder", "verify_tests", "linkedin_gate", "memory_write"]:
     if state.get("abort"):
         return "memory_write"
     if state.get("status") == "shipped":
+        kind = detect_deliverable_kind(state)
+        if kind == "github_issue":
+            return "verify_tests"
+        if kind == "linkedin_posts":
+            return "linkedin_gate"
         return "memory_write"
-    # revise path
     return "builder"
+
+
+def route_after_linkedin_gate(
+    state: CompanyState,
+) -> Literal["linkedin_gate", "linkedin_publish", "memory_write"]:
+    phase = state.get("pipeline_phase")
+    decision = state.get("linkedin_publish_decision") or {}
+    if phase == "linkedin_revise":
+        return "linkedin_gate"
+    if decision.get("action") == "approve":
+        return "linkedin_publish"
+    return "memory_write"
+
+
+def route_after_verify_tests(
+    state: CompanyState,
+) -> Literal["builder", "create_pr"]:
+    passed = bool(state.get("tests_passed"))
+    retries = int(state.get("test_retries") or 0)
+    if not passed and retries <= 2 and state.get("pipeline_phase") == "fix_loop":
+        return "builder"
+    if not passed and retries <= 2 and state.get("status") == "building":
+        return "builder"
+    return "create_pr"
 
 
 def build_graph():
@@ -66,6 +108,11 @@ def build_graph():
     graph.add_node("builder", builder_node)
     graph.add_node("critic", critic_node)
     graph.add_node("ship_gate", ship_gate_node)
+    graph.add_node("verify_tests", verify_tests_node)
+    graph.add_node("create_pr", create_pr_node)
+    graph.add_node("linkedin_announce", linkedin_announce_node)
+    graph.add_node("linkedin_gate", linkedin_gate_node)
+    graph.add_node("linkedin_publish", linkedin_publish_node)
     graph.add_node("memory_write", memory_write_node)
 
     graph.add_edge(START, "memory_recall")
@@ -82,7 +129,11 @@ def build_graph():
         },
     )
     graph.add_edge("specialists", "builder")
-    graph.add_edge("builder", "critic")
+    graph.add_conditional_edges(
+        "builder",
+        route_after_builder,
+        {"critic": "critic", "verify_tests": "verify_tests"},
+    )
     graph.add_conditional_edges(
         "critic",
         route_after_critic,
@@ -95,8 +146,30 @@ def build_graph():
     graph.add_conditional_edges(
         "ship_gate",
         route_after_ship_gate,
-        {"builder": "builder", "memory_write": "memory_write"},
+        {
+            "builder": "builder",
+            "verify_tests": "verify_tests",
+            "linkedin_gate": "linkedin_gate",
+            "memory_write": "memory_write",
+        },
     )
+    graph.add_conditional_edges(
+        "verify_tests",
+        route_after_verify_tests,
+        {"builder": "builder", "create_pr": "create_pr"},
+    )
+    graph.add_edge("create_pr", "linkedin_announce")
+    graph.add_edge("linkedin_announce", "linkedin_gate")
+    graph.add_conditional_edges(
+        "linkedin_gate",
+        route_after_linkedin_gate,
+        {
+            "linkedin_gate": "linkedin_gate",
+            "linkedin_publish": "linkedin_publish",
+            "memory_write": "memory_write",
+        },
+    )
+    graph.add_edge("linkedin_publish", "memory_write")
     graph.add_edge("memory_write", END)
     return graph
 
@@ -129,4 +202,7 @@ def initial_state(
         "revision_notes": [],
         "critique_history": [],
         "abort": False,
+        "deliverable_kind": "software",
+        "test_retries": 0,
+        "tests_passed": False,
     }

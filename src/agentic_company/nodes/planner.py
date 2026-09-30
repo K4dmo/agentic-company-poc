@@ -4,10 +4,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from langchain.chat_models import init_chat_model
 from langchain_core.messages import HumanMessage, SystemMessage
 
-from agentic_company.config import get_settings
+from agentic_company.llm import get_chat_model
 from agentic_company.persistence import write_artifact
 from agentic_company.prompts import PLANNER_SYSTEM
 from agentic_company.roles.registry import describe_registry, normalize_hired
@@ -15,8 +14,7 @@ from agentic_company.schemas import PlanOutput
 
 
 def planner_node(state: dict[str, Any]) -> dict[str, Any]:
-    settings = get_settings()
-    llm = init_chat_model(settings.planner_model).with_structured_output(PlanOutput)
+    llm = get_chat_model("planner").with_structured_output(PlanOutput)
 
     memory_hits = state.get("memory_hits") or []
     memory_text = "\n\n".join(
@@ -41,6 +39,7 @@ Available specialists:
         "acceptance_criteria": result.acceptance_criteria,
         "file_outline": result.file_outline,
         "hired_specialists": hired,
+        "deliverable_kind": result.deliverable_kind,
         "status": "awaiting_human",
         # reset specialist notes on replan
         "specialist_notes": [],
@@ -55,6 +54,7 @@ Available specialists:
                 "acceptance_criteria": result.acceptance_criteria,
                 "file_outline": result.file_outline,
                 "hired_specialists": hired,
+                "deliverable_kind": result.deliverable_kind,
             },
         )
     return payload

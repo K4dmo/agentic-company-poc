@@ -3,7 +3,17 @@
 <h1>New run</h1>
 <form method="post" action="/runs/new" class="card">
   <label>Brief</label>
-  <textarea name="brief" rows="6" required placeholder="Build a CPF validator module with tests"></textarea>
+  <textarea name="brief" rows="5" placeholder="Build a CPF validator module with tests"></textarea>
+
+  <div style="margin-top: 1rem;">
+    <label>Or GitHub issue URL</label>
+    <input type="url" name="issue_url" placeholder="https://github.com/owner/repo/issues/123" />
+    <label class="row" style="margin-top: 0.5rem;">
+      <input type="checkbox" name="clone_repo" value="1" />
+      Clone repository into workspace/repo/
+    </label>
+  </div>
+
   <div style="margin-top: 1rem;">
     <label>Builder backend</label>
     <select name="builder">

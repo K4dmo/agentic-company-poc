@@ -52,6 +52,7 @@ def plan_gate_node(state: dict[str, Any]) -> dict[str, Any]:
 
 def ship_gate_node(state: dict[str, Any]) -> dict[str, Any]:
     settings = get_settings()
+    kind = (state.get("deliverable_kind") or "software").lower()
     payload = {
         "type": "ship_approval",
         "brief": state.get("brief"),
@@ -59,6 +60,16 @@ def ship_gate_node(state: dict[str, Any]) -> dict[str, Any]:
         "builder_summary": state.get("builder_summary"),
         "critique": state.get("critique"),
         "thread_id": state.get("thread_id"),
+        "deliverable_kind": kind,
+        "next_if_approved": (
+            ["verify_tests", "create_pr", "linkedin_announce", "linkedin_gate", "linkedin_publish"]
+            if kind == "github_issue"
+            else (
+                ["linkedin_gate", "linkedin_publish"]
+                if kind == "linkedin_posts"
+                else ["memory_write"]
+            )
+        ),
     }
     if settings.eval_mode:
         decision = _auto_decision("ship")

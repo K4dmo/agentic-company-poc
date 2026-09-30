@@ -36,4 +36,4 @@ agentic-company-web = "agentic_company.web.app:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-agentic_company = ["web/templates/*.html"]
+agentic_company = ["web/templates/*.html", "templates/*.json"]

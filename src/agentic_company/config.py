@@ -16,7 +16,14 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 @dataclass(frozen=True)
 class Settings:
+    llm_provider: str
     openai_api_key: str
+    openrouter_api_key: str
+    openrouter_base_url: str
+    openrouter_http_referer: str
+    openrouter_app_name: str
+    cursor_api_key: str
+    cursor_base_url: str
     planner_model: str
     critic_model: str
     specialist_model: str
@@ -65,8 +72,19 @@ def get_settings() -> Settings:
     if memory_backend not in {"local", "remote"}:
         memory_backend = "local"
 
+    provider = os.getenv("LLM_PROVIDER", "auto").strip().lower()
+    if provider not in {"auto", "openai", "openrouter", "cursor"}:
+        provider = "auto"
+
     return Settings(
+        llm_provider=provider,
         openai_api_key=os.getenv("OPENAI_API_KEY", ""),
+        openrouter_api_key=os.getenv("OPENROUTER_API_KEY", ""),
+        openrouter_base_url=os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1").strip(),
+        openrouter_http_referer=os.getenv("OPENROUTER_HTTP_REFERER", "").strip(),
+        openrouter_app_name=os.getenv("OPENROUTER_APP_NAME", "agentic-company").strip(),
+        cursor_api_key=os.getenv("CURSOR_API_KEY", ""),
+        cursor_base_url=os.getenv("CURSOR_BASE_URL", "").strip(),
         planner_model=os.getenv("PLANNER_MODEL", "openai:gpt-4.1-mini"),
         critic_model=os.getenv("CRITIC_MODEL", "openai:gpt-4.1-mini"),
         specialist_model=os.getenv("SPECIALIST_MODEL", "openai:gpt-4.1-mini"),

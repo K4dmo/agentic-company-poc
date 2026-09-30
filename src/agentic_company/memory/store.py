@@ -24,18 +24,24 @@ class LocalChromaStore:
         settings = get_settings()
         settings.memory_dir.mkdir(parents=True, exist_ok=True)
         self._client = chromadb.PersistentClient(path=str(settings.memory_dir))
-        api_key = settings.openai_api_key or None
-        if api_key:
-            ef = embedding_functions.OpenAIEmbeddingFunction(
-                api_key=api_key,
-                model_name="text-embedding-3-small",
-            )
+
+        from agentic_company.llm import embedding_config
+
+        emb = embedding_config()
+        if emb:
+            kwargs: dict[str, Any] = {
+                "api_key": emb["api_key"],
+                "model_name": emb["model_name"],
+            }
+            if emb.get("api_base"):
+                kwargs["api_base"] = emb["api_base"]
+            ef = embedding_functions.OpenAIEmbeddingFunction(**kwargs)
             self._collection = self._client.get_or_create_collection(
                 name="company_memory",
                 embedding_function=ef,
             )
         else:
-            # Deterministic local embeddings when no API key (eval / offline)
+            # Deterministic local embeddings when no compatible embedding key
             self._collection = self._client.get_or_create_collection(name="company_memory")
 
     def query(self, text: str, top_k: int = 3) -> list[dict[str, Any]]:
